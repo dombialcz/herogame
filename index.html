@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Game - Hex Grid Turn-Based Combat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #game-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #current-turn {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .turn-blue {
+            color: #4da6ff;
+        }
+
+        .turn-red {
+            color: #ff4d4d;
+        }
+
+        #grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .hex-row {
+            display: flex;
+            justify-content: center;
+        }
+
+        .hex-row:nth-child(even) {
+            margin-left: 27px;
+        }
+
+        .hex {
+            width: 48px;
+            height: 55px;
+            position: relative;
+            margin: 2px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .hex:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .hex-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #2a3d5a;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            border: 2px solid #3d5a7a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .hex.selected .hex-inner {
+            background: #4a6d9a;
+            border-color: #ffeb3b;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.6);
+        }
+
+        .hex.valid-move .hex-inner {
+            background: #3d7a3d;
+            border-color: #4caf50;
+        }
+
+        .hex.occupied .hex-inner {
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+
+        .hex.player-blue .hex-inner {
+            background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
+            border-color: #64b5f6;
+            color: white;
+        }
+
+        .hex.enemy-red .hex-inner {
+            background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+            border-color: #ef5350;
+            color: white;
+        }
+
+        .unit-icon {
+            font-size: 1.5em;
+        }
+
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #unit-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .unit-type {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        #action-log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 600px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Hero Game - Hex Grid Battle</h1>
+    
+    <div id="game-info">
+        <div id="current-turn">Current Turn: <span id="turn-indicator" class="turn-blue">Blue Player</span></div>
+        <div>Click a unit to select, then click a valid hex to move</div>
+    </div>
+
+    <div id="grid-container"></div>
+
+    <div id="controls">
+        <button id="end-turn-btn" onclick="endTurn()">End Turn</button>
+        <button id="reset-btn" onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <div id="unit-info">
+        <strong>Unit Types (Coming Soon):</strong><br>
+        <span class="unit-type">⚔️ Warrior</span>
+        <span class="unit-type">🏹 Archer</span>
+        <span class="unit-type">🧙 Mage</span>
+    </div>
+
+    <div id="action-log">
+        <strong>Action Log:</strong>
+        <div id="log-content"></div>
+    </div>
+
+    <script>
+        // Game State
+        const GRID_SIZE = 12;
+        let currentTurn = 'blue'; // 'blue' or 'red'
+        let selectedHex = null;
+        let grid = [];
+        let units = [];
+
+        // Unit types (for future expansion)
+        const UNIT_TYPES = {
+            WARRIOR: { name: 'Warrior', icon: '⚔️', movement: 2 },
+            ARCHER: { name: 'Archer', icon: '🏹', movement: 2 },
+            MAGE: { name: 'Mage', icon: '🧙', movement: 2 }
+        };
+
+        // Initialize the game
+        function initGame() {
+            createGrid();
+            placeInitialUnits();
+            updateTurnIndicator();
+            logAction('Game started! Blue player goes first.');
+        }
+
+        // Create the hex grid
+        function createGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            grid = [];
+
+            for (let row = 0; row < GRID_SIZE; row++) {
+                const hexRow = document.createElement('div');
+                hexRow.className = 'hex-row';
+                grid[row] = [];
+
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const hex = document.createElement('div');
+                    hex.className = 'hex';
+                    hex.dataset.row = row;
+                    hex.dataset.col = col;
+                    
+                    const hexInner = document.createElement('div');
+                    hexInner.className = 'hex-inner';
+                    
+                    hex.appendChild(hexInner);
+                    hexRow.appendChild(hex);
+                    
+                    hex.addEventListener('click', () => handleHexClick(row, col));
+                    
+                    grid[row][col] = {
+                        element: hex,
+                        unit: null
+                    };
+                }
+
+                container.appendChild(hexRow);
+            }
+        }
+
+        // Place initial units on the grid
+        function placeInitialUnits() {
+            units = [];
+
+            // Blue player units (bottom)
+            const blueUnits = [
+                { row: 10, col: 5, team: 'blue', type: UNIT_TYPES.WARRIOR },
+                { row: 11, col: 5, team: 'blue', type: UNIT_TYPES.WARRIOR },
+                { row: 10, col: 6, team: 'blue', type: UNIT_TYPES.WARRIOR }
+            ];
+
+            // Red enemy units (top)
+            const redUnits = [
+                { row: 0, col: 5, team: 'red', type: UNIT_TYPES.WARRIOR },
+                { row: 1, col: 5, team: 'red', type: UNIT_TYPES.WARRIOR },
+                { row: 0, col: 6, team: 'red', type: UNIT_TYPES.WARRIOR }
+            ];
+
+            [...blueUnits, ...redUnits].forEach(unitData => {
+                const unit = {
+                    ...unitData,
+                    id: units.length,
+                    hasMoved: false
+                };
+                units.push(unit);
+                placeUnit(unit);
+            });
+        }
+
+        // Place a unit on the grid
+        function placeUnit(unit) {
+            const hex = grid[unit.row][unit.col];
+            hex.unit = unit;
+            hex.element.classList.add('occupied', `${unit.team === 'blue' ? 'player-blue' : 'enemy-red'}`);
+            hex.element.querySelector('.hex-inner').innerHTML = `<span class="unit-icon">${unit.type.icon}</span>`;
+        }
+
+        // Remove unit from grid
+        function removeUnit(row, col) {
+            const hex = grid[row][col];
+            hex.unit = null;
+            hex.element.classList.remove('occupied', 'player-blue', 'enemy-red');
+            hex.element.querySelector('.hex-inner').innerHTML = '';
+        }
+
+        // Handle hex click
+        function handleHexClick(row, col) {
+            const hex = grid[row][col];
+
+            // If a unit is already selected
+            if (selectedHex) {
+                // Try to move the selected unit
+                if (hex.element.classList.contains('valid-move')) {
+                    moveUnit(selectedHex.row, selectedHex.col, row, col);
+                }
+                clearSelection();
+            } else {
+                // Try to select a unit
+                if (hex.unit && hex.unit.team === currentTurn && !hex.unit.hasMoved) {
+                    selectHex(row, col);
+                }
+            }
+        }
+
+        // Select a hex
+        function selectHex(row, col) {
+            selectedHex = { row, col };
+            grid[row][col].element.classList.add('selected');
+            showValidMoves(row, col);
+        }
+
+        // Clear selection
+        function clearSelection() {
+            if (selectedHex) {
+                grid[selectedHex.row][selectedHex.col].element.classList.remove('selected');
+            }
+            selectedHex = null;
+            clearValidMoves();
+        }
+
+        // Show valid moves for selected unit
+        function showValidMoves(row, col) {
+            const unit = grid[row][col].unit;
+            if (!unit) return;
+
+            const moves = getValidMoves(row, col, unit.type.movement);
+            moves.forEach(move => {
+                grid[move.row][move.col].element.classList.add('valid-move');
+            });
+        }
+
+        // Clear valid move indicators
+        function clearValidMoves() {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    grid[row][col].element.classList.remove('valid-move');
+                }
+            }
+        }
+
+        // Get valid moves for a unit (hex grid neighbors)
+        function getValidMoves(row, col, range) {
+            const moves = [];
+            const visited = new Set();
+            const queue = [{ row, col, distance: 0 }];
+            visited.add(`${row},${col}`);
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                
+                if (current.distance < range) {
+                    const neighbors = getHexNeighbors(current.row, current.col);
+                    neighbors.forEach(neighbor => {
+                        const key = `${neighbor.row},${neighbor.col}`;
+                        if (!visited.has(key)) {
+                            visited.add(key);
+                            
+                            // Check if the hex is empty
+                            if (!grid[neighbor.row][neighbor.col].unit) {
+                                moves.push(neighbor);
+                            }
+                            
+                            queue.push({ ...neighbor, distance: current.distance + 1 });
+                        }
+                    });
+                }
+            }
+
+            return moves;
+        }
+
+        // Get hex neighbors (offset coordinate system)
+        function getHexNeighbors(row, col) {
+            const neighbors = [];
+            const isEvenRow = row % 2 === 0;
+
+            // Hex grid neighbor offsets for even/odd rows
+            const offsets = isEvenRow ? [
+                [-1, -1], [-1, 0],  // top-left, top-right
+                [0, -1],  [0, 1],   // left, right
+                [1, -1],  [1, 0]    // bottom-left, bottom-right
+            ] : [
+                [-1, 0],  [-1, 1],  // top-left, top-right
+                [0, -1],  [0, 1],   // left, right
+                [1, 0],   [1, 1]    // bottom-left, bottom-right
+            ];
+
+            offsets.forEach(([dRow, dCol]) => {
+                const newRow = row + dRow;
+                const newCol = col + dCol;
+                if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE) {
+                    neighbors.push({ row: newRow, col: newCol });
+                }
+            });
+
+            return neighbors;
+        }
+
+        // Move unit
+        function moveUnit(fromRow, fromCol, toRow, toCol) {
+            const unit = grid[fromRow][fromCol].unit;
+            
+            removeUnit(fromRow, fromCol);
+            unit.row = toRow;
+            unit.col = toCol;
+            unit.hasMoved = true;
+            placeUnit(unit);
+
+            logAction(`${unit.team === 'blue' ? 'Blue' : 'Red'} ${unit.type.name} moved to (${toRow}, ${toCol})`);
+        }
+
+        // End turn
+        function endTurn() {
+            // Reset hasMoved flag for all units of the current team
+            units.forEach(unit => {
+                if (unit.team === currentTurn) {
+                    unit.hasMoved = false;
+                }
+            });
+
+            // Switch turn
+            currentTurn = currentTurn === 'blue' ? 'red' : 'blue';
+            updateTurnIndicator();
+            clearSelection();
+            
+            logAction(`Turn ended. ${currentTurn === 'blue' ? 'Blue' : 'Red'} player's turn.`);
+        }
+
+        // Update turn indicator
+        function updateTurnIndicator() {
+            const indicator = document.getElementById('turn-indicator');
+            if (currentTurn === 'blue') {
+                indicator.textContent = 'Blue Player';
+                indicator.className = 'turn-blue';
+            } else {
+                indicator.textContent = 'Red Enemy';
+                indicator.className = 'turn-red';
+            }
+        }
+
+        // Reset game
+        function resetGame() {
+            currentTurn = 'blue';
+            selectedHex = null;
+            initGame();
+            logAction('Game reset!');
+        }
+
+        // Log action
+        function logAction(message) {
+            const logContent = document.getElementById('log-content');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `• ${message}`;
+            logContent.insertBefore(entry, logContent.firstChild);
+
+            // Keep only last 10 entries
+            while (logContent.children.length > 10) {
+                logContent.removeChild(logContent.lastChild);
+            }
+        }
+
+        // Initialize game on load
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
