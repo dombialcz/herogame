@@ -225,6 +225,7 @@
     <script>
         // Game State
         const GRID_SIZE = 12;
+        const MAX_LOG_ENTRIES = 10;
         let currentTurn = 'blue'; // 'blue' or 'red'
         let selectedHex = null;
         let grid = [];
@@ -313,7 +314,8 @@
         function placeUnit(unit) {
             const hex = grid[unit.row][unit.col];
             hex.unit = unit;
-            hex.element.classList.add('occupied', `${unit.team === 'blue' ? 'player-blue' : 'enemy-red'}`);
+            const teamClass = unit.team === 'blue' ? 'player-blue' : 'enemy-red';
+            hex.element.classList.add('occupied', teamClass);
             hex.element.querySelector('.hex-inner').innerHTML = `<span class="unit-icon">${unit.type.icon}</span>`;
         }
 
@@ -402,7 +404,7 @@
                                 moves.push(neighbor);
                             }
                             
-                            queue.push({ ...neighbor, distance: current.distance + 1 });
+                            queue.push({ row: neighbor.row, col: neighbor.col, distance: current.distance + 1 });
                         }
                     });
                 }
@@ -496,8 +498,8 @@
             entry.textContent = `• ${message}`;
             logContent.insertBefore(entry, logContent.firstChild);
 
-            // Keep only last 10 entries
-            while (logContent.children.length > 10) {
+            // Keep only last entries
+            while (logContent.children.length > MAX_LOG_ENTRIES) {
                 logContent.removeChild(logContent.lastChild);
             }
         }
