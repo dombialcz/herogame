@@ -225,10 +225,10 @@
     </div>
 
     <div id="unit-info">
-        <strong>Unit Types (Coming Soon):</strong><br>
-        <span class="unit-type">⚔️ Warrior</span>
+        <strong>Unit Types:</strong><br>
+        <span class="unit-type">⚔️ Footman</span>
         <span class="unit-type">🏹 Archer</span>
-        <span class="unit-type">🧙 Mage</span>
+        <span class="unit-type">🐴 Knight</span>
     </div>
 
     <div id="action-log">
@@ -245,11 +245,34 @@
         let grid = [];
         let units = [];
 
-        // Unit types (for future expansion)
+        // Unit types
         const UNIT_TYPES = {
-            WARRIOR: { name: 'Warrior', icon: '⚔️', movement: 2 },
-            ARCHER: { name: 'Archer', icon: '🏹', movement: 2 },
-            MAGE: { name: 'Mage', icon: '🧙', movement: 2 }
+            FOOTMAN: {
+                name: 'Footman',
+                icon: '⚔️',
+                maxHp: 5,
+                movement: 3,
+                attack: 2,
+                attackRule: { type: 'exactRange', values: [1] }
+            },
+            ARCHER: {
+                name: 'Archer',
+                icon: '🏹',
+                maxHp: 3,
+                movement: 2,
+                attack: 2,
+                attackRule: { type: 'exactRange', values: [3, 4] }
+            },
+            KNIGHT: {
+                name: 'Knight',
+                icon: '🐴',
+                maxHp: 8,
+                movement: 3,
+                chargeMovement: 5,
+                attackRule: { type: 'adjacent' },
+                damageIfMoved: 3,
+                damageIfStationary: 2
+            }
         };
 
         // Initialize the game
@@ -301,16 +324,20 @@
 
             // Blue player units (bottom)
             const blueUnits = [
-                { row: 10, col: 5, team: 'blue', type: UNIT_TYPES.WARRIOR },
-                { row: 11, col: 5, team: 'blue', type: UNIT_TYPES.WARRIOR },
-                { row: 10, col: 6, team: 'blue', type: UNIT_TYPES.WARRIOR }
+                { row: 10, col: 5, team: 'blue', type: UNIT_TYPES.FOOTMAN },
+                { row: 11, col: 5, team: 'blue', type: UNIT_TYPES.FOOTMAN },
+                { row: 10, col: 6, team: 'blue', type: UNIT_TYPES.FOOTMAN },
+                { row: 11, col: 4, team: 'blue', type: UNIT_TYPES.ARCHER },
+                { row: 11, col: 6, team: 'blue', type: UNIT_TYPES.KNIGHT }
             ];
 
             // Red enemy units (top)
             const redUnits = [
-                { row: 0, col: 5, team: 'red', type: UNIT_TYPES.WARRIOR },
-                { row: 1, col: 5, team: 'red', type: UNIT_TYPES.WARRIOR },
-                { row: 0, col: 6, team: 'red', type: UNIT_TYPES.WARRIOR }
+                { row: 0, col: 5, team: 'red', type: UNIT_TYPES.FOOTMAN },
+                { row: 1, col: 5, team: 'red', type: UNIT_TYPES.FOOTMAN },
+                { row: 0, col: 6, team: 'red', type: UNIT_TYPES.FOOTMAN },
+                { row: 0, col: 4, team: 'red', type: UNIT_TYPES.ARCHER },
+                { row: 1, col: 6, team: 'red', type: UNIT_TYPES.KNIGHT }
             ];
 
             [...blueUnits, ...redUnits].forEach(unitData => {
